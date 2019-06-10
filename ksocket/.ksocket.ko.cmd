@@ -1,1 +1,0 @@
-cmd_/home/cnlab/project2/ksocket/ksocket.ko := ld -r -m elf_x86_64 -z max-page-size=0x200000 -T ./scripts/module-common.lds --build-id  -o /home/cnlab/project2/ksocket/ksocket.ko /home/cnlab/project2/ksocket/ksocket.o /home/cnlab/project2/ksocket/ksocket.mod.o ;  true
