@@ -11,7 +11,7 @@
 
 #define PAGE_SIZE 4096
 #define BUF_SIZE 512
-#define MAP_SIZE (PAGE_SIZE * 10)
+#define MAP_SIZE PAGE_SIZE * 100
 int main (int argc, char* argv[])
 {
 	char buf[BUF_SIZE];
@@ -36,7 +36,7 @@ int main (int argc, char* argv[])
 		return 1;
 	}
 	gettimeofday(&start ,NULL);
-	if( (file_fd = open (file_name, O_RDWR | O_CREAT | O_TRUNC, 0666)) < 0)
+	if( (file_fd = open (file_name, O_RDWR | O_CREAT | O_TRUNC)) < 0)
 	{
 		perror("failed to open input file\n");
 		return 1;
@@ -75,8 +75,8 @@ int main (int argc, char* argv[])
 				posix_fallocate(file_fd, offset, ret);
 				file_address = mmap(NULL, ret, PROT_WRITE, MAP_SHARED, file_fd, offset);
 				kernel_address = mmap(NULL, ret, PROT_READ, MAP_SHARED, dev_fd, offset);
-				fprintf(stderr, "file addr: %p\n", file_address);
-				fprintf(stderr, "kernel addr: %p\n", kernel_address);
+				//fprintf(stderr, "file addr: %p\n", file_address);
+				//fprintf(stderr, "kernel addr: %p\n", kernel_address);
 				memcpy(file_address, kernel_address, ret);
 				offset += ret;
 			}
@@ -84,7 +84,7 @@ int main (int argc, char* argv[])
 	}
 
 
-	ioctl(dev_fd, 7122);
+	ioctl(dev_fd, 7122); //tcp
 
 	if(ioctl(dev_fd, 0x12345679) == -1)// end receiving data, close the connection
 	{

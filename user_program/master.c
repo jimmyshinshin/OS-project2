@@ -74,14 +74,11 @@ int main (int argc, char* argv[])
 				}
 				file_address = mmap(NULL, length, PROT_READ, MAP_SHARED, file_fd, offset);
 				kernel_address = mmap(NULL, length, PROT_WRITE, MAP_SHARED, dev_fd, offset);
-				fprintf(stderr, "file addr: %p\n", file_address);
-				fprintf(stderr, "kernel addr: %p\n", kernel_address);
+				//fprintf(stderr, "file addr: %p\n", file_address);
+				//fprintf(stderr, "kernel addr: %p\n", kernel_address);
 				memcpy(kernel_address, file_address, length);
 				offset += length;
-				if (ioctl(dev_fd, 0x12345678, length) == -1) {
-					perror("ioctl\n");
-					return 1;
-				}
+				ioctl(dev_fd, 0x12345678, length);
 			}
 			break;
 	}
