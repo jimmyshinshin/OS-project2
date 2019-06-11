@@ -23,7 +23,7 @@
 #include <asm/uaccess.h>
 #include "ksocket.h"
 //#include "nested.h"
-#include "sxgdebug.h"
+//#include "sxgdebug.h"
 
 #define KSOCKET_NAME	"ksocket"
 #define KSOCKET_VERSION	"0.0.2"
@@ -167,16 +167,27 @@ ssize_t krecv(ksocket_t socket, void *buffer, size_t length, int flags)
 	mm_segment_t old_fs;
 #endif
 
+	memset(&msg,0,sizeof(msg));
 	sk = (struct socket *)socket;
 
 	iov.iov_base = (void *)buffer;
 	iov.iov_len = (__kernel_size_t)length;
-
+	/* msg_iter not found, so deleted
+	//type
+	msg.msg_iter.type = READ; 
+	*/
 	//address
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
+	/*
+	//msg_iter
+	msg.msg_iter.iov = &iov;
+     	msg.msg_iter.iov_offset = 0;
+	msg.msg_iter.count = iov.iov_len;
+	msg.msg_iter.nr_segs = 1;
+	*/
 	//control
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
