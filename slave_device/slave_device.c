@@ -30,6 +30,7 @@
 #define slave_IOCTL_EXIT 0x12345679
 
 
+#define PAGE_SIZE 4096
 #define BUF_SIZE 512
 #define MAP_SIZE PAGE_SIZE * 100
 
