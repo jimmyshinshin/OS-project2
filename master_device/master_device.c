@@ -190,7 +190,7 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
 	size_t data_size = 0, offset = 0;
 	char *tmp;
 	pgd_t *pgd;
-	pud_t *pud;
+	//pud_t *pud;
 	pmd_t *pmd;
     pte_t *ptep, pte;
 	old_fs = get_fs();
@@ -224,7 +224,7 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
 			break;
 		default:
 			pgd = pgd_offset(current->mm, ioctl_param);
-			pud = pud_offset(pgd, ioctl_param);
+			//pud = pud_offset(pgd, ioctl_param);
 			pmd = pmd_offset(pud, ioctl_param);
 			ptep = pte_offset_kernel(pmd , ioctl_param);
 			pte = *ptep;
