@@ -151,15 +151,14 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 
 	int addr_len ;
 	//unsigned int i;
-	//size_t len, data_size = 0;
-	size_t offset = 0, rec_n;
+	size_t len, data_size = 0, offset = 0;
 	char *tmp, ip[20], buf[BUF_SIZE];
 	//struct page *p_print;
 	//unsigned char *px;
 
     pgd_t *pgd;
 	//p4d_t *p4d;
-	pud_t *pud;
+	//pud_t *pud;
 	pmd_t *pmd;
     pte_t *ptep, pte;
 	old_fs = get_fs();
@@ -202,12 +201,12 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			break;
 		case slave_IOCTL_MMAP:
 			while (1) {
-				rec_n = krecv(sockfd_cli, buf, sizeof(buf), 0);
-				if (rec_n == 0) {
+				len = krecv(sockfd_cli, buf, sizeof(buf), 0);
+				if (len == 0) {
 					break;
 				}
-				memcpy(file->private_data + offset, buf, rec_n);
-				offset += rec_n;
+				memcpy(file->private_data + offset, buf, len);
+				offset += len;
 			}
 			ret = offset;
 			break;
