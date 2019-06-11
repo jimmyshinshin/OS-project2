@@ -18,6 +18,7 @@
 #include <linux/slab.h>
 #include <linux/debugfs.h>
 #include <linux/mm.h>
+#include <linux/highmem.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
 #include <asm/highmem.h>
@@ -31,7 +32,7 @@
 #define master_IOCTL_EXIT 0x12345679
 #define PAGE_SIZE 4096
 #define BUF_SIZE 512
-#define MAP_SIZE PAGE_SIZE * 100
+#define MAP_SIZE PAGE_SIZE * 2000
 typedef struct socket * ksocket_t;
 
 struct dentry  *file1;//debug file
@@ -190,9 +191,10 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
 	size_t data_size = 0, offset = 0;
 	char *tmp;
 	pgd_t *pgd;
-	//pud_t *pud;
+	pud_t *pud;
 	pmd_t *pmd;
     pte_t *ptep, pte;
+	struct page* page;
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
 	switch(ioctl_num){
@@ -224,11 +226,16 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
 			break;
 		default:
 			pgd = pgd_offset(current->mm, ioctl_param);
-			//pud = pud_offset(pgd, ioctl_param);
-			pmd = pmd_offset(pgd, ioctl_param);
-			ptep = pte_offset_kernel(pmd , ioctl_param);
+			pud = pud_offset(pgd, ioctl_param);
+			pmd = pmd_offset(pud, ioctl_param);
+			ptep = pte_offset_map(pmd , ioctl_param);
 			pte = *ptep;
-			printk("master: %lX\n", pte);
+			page = pte_page(pte);
+			if(page)
+			printk("master page descriptor: %p\n", page);
+			else
+			printk("master page descriptor error");
+			pte_unmap(ptep);
 			ret = 0;
 			break;
 	}
