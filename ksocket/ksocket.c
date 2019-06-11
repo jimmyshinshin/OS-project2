@@ -203,6 +203,7 @@ ssize_t krecv(ksocket_t socket, void *buffer, size_t length, int flags)
 	set_fs(KERNEL_DS);
 #endif
 	//hardik
+	//ret = sock_recvmsg(sk, &msg, length, flags| MSG_DONTWAIT);
 	ret = sock_recvmsg(sk, &msg, length, flags);
 #ifndef KSOCKET_ADDR_SAFE
 	set_fs(old_fs);

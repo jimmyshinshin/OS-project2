@@ -10,8 +10,8 @@
 #include <sys/time.h>
 
 #define PAGE_SIZE 4096
-#define BUF_SIZE 512
-#define MAP_SIZE PAGE_SIZE * 100
+#define BUF_SIZE (PAGE_SIZE/8)
+#define MAP_SIZE (PAGE_SIZE * 100)
 size_t get_filesize(const char* filename);//get the size of the input file
 
 
@@ -19,7 +19,8 @@ int main (int argc, char* argv[])
 {
 	char buf[BUF_SIZE];
 	int i, dev_fd, file_fd;// the fd for the device and the fd for the input file
-	size_t ret, file_size, offset = 0, tmp;
+	size_t ret, file_size, tmp;
+	off_t offset = 0;
 	char file_name[50], method[20];
 	char *kernel_address = NULL, *file_address = NULL;
 	struct timeval start;
@@ -67,25 +68,33 @@ int main (int argc, char* argv[])
 			}while(ret > 0);
 			break;
 		case 'm':
+			kernel_address = mmap(NULL, MAP_SIZE, PROT_WRITE, MAP_SHARED, dev_fd, 0);
 			while (offset < file_size) {
 				size_t length = MAP_SIZE;
 				if ((file_size - offset) < length) {
 					length = file_size - offset;
 				}
 				file_address = mmap(NULL, length, PROT_READ, MAP_SHARED, file_fd, offset);
-				kernel_address = mmap(NULL, length, PROT_WRITE, MAP_SHARED, dev_fd, offset);
+				//kernel_address = mmap(NULL, length, PROT_WRITE, MAP_SHARED, dev_fd, 0);
 				//fprintf(stderr, "file addr: %p\n", file_address);
 				//fprintf(stderr, "kernel addr: %p\n", kernel_address);
 				memcpy(kernel_address, file_address, length);
 				munmap(file_address, length);
-				munmap(kernel_address, length);
+				//munmap(kernel_address, length);
 				offset += length;
 				ioctl(dev_fd, 0x12345678, length);
+				/*
+				printf("continue?");
+				int dd;
+				scanf("%d",&dd);
+				if(dd!=1)break;*/
 			}
+			ioctl(dev_fd, 23, (unsigned long)kernel_address);
+			munmap(kernel_address, MAP_SIZE);
 			break;
 	}
 
-	ioctl(dev_fd, 7122);
+	
 
 	if(ioctl(dev_fd, 0x12345679) == -1) // end sending data, close the connection
 	{

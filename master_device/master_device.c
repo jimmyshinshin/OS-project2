@@ -26,13 +26,14 @@
 #define VM_RESERVED   (VM_DONTEXPAND | VM_DONTDUMP)
 #endif
 
+
+#define PAGE_SIZE 4096
 #define DEFAULT_PORT 2325
 #define master_IOCTL_CREATESOCK 0x12345677
 #define master_IOCTL_MMAP 0x12345678
 #define master_IOCTL_EXIT 0x12345679
-#define PAGE_SIZE 4096
-#define BUF_SIZE 512
-#define MAP_SIZE PAGE_SIZE * 2000
+#define BUF_SIZE (PAGE_SIZE/8)
+#define MAP_SIZE (PAGE_SIZE * 100)
 typedef struct socket * ksocket_t;
 
 struct dentry  *file1;//debug file
@@ -153,15 +154,12 @@ static int __init master_init(void)
 		printk("listen failed\n");
 		return -1;
 	}
-    printk("master_device init OK\n");
-	set_fs(old_fs);
 	return 0;
 }
 
 static void __exit master_exit(void)
 {
 	misc_deregister(&master_dev);
-    printk("misc_deregister\n");
 	if(kclose(sockfd_srv) == -1)
 	{
 		printk("kclose srv error\n");
@@ -175,12 +173,19 @@ static void __exit master_exit(void)
 int master_close(struct inode *inode, struct file *filp)
 {
 	kfree(filp->private_data);
+	//free_pages(filp->private_data,9);
 	return 0;
 }
 
 int master_open(struct inode *inode, struct file *filp)
 {
+	//printk("MAPSIZE slave: %d\n", MAP_SIZE);
+	//filp->private_data = __get_free_pages(GFP_KERNEL,9);
 	filp->private_data = kmalloc(MAP_SIZE, GFP_KERNEL);
+	if(filp->private_data==NULL)
+	{
+		printk("NULL pointer error(master)");
+}
 	return 0;
 }
 
@@ -188,15 +193,13 @@ int master_open(struct inode *inode, struct file *filp)
 static long master_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl_param)
 {
 	long ret = -EINVAL;
-	size_t data_size = 0, offset = 0;
+	//size_t data_size = 0, offset = 0;
 	char *tmp;
 	pgd_t *pgd;
 	pud_t *pud;
 	pmd_t *pmd;
-    pte_t *ptep, pte;
+        pte_t *ptep, pte;
 	struct page* page;
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
 	switch(ioctl_num){
 		case master_IOCTL_CREATESOCK:// create socket and accept a connection
 			sockfd_cli = kaccept(sockfd_srv, (struct sockaddr *)&addr_cli, &addr_len);
@@ -214,6 +217,7 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
 			ret = 0;
 			break;
 		case master_IOCTL_MMAP:
+			//printk("%s\n", file->private_data);
 			ksend(sockfd_cli, file->private_data, ioctl_param, 0);
 			break;
 		case master_IOCTL_EXIT:
@@ -240,7 +244,6 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
 			break;
 	}
 
-	set_fs(old_fs);
 	return ret;
 }
 static ssize_t send_msg(struct file *file, const char __user *buf, size_t count, loff_t *data)
@@ -261,3 +264,4 @@ static ssize_t send_msg(struct file *file, const char __user *buf, size_t count,
 module_init(master_init);
 module_exit(master_exit);
 MODULE_LICENSE("GPL");
+

@@ -8,15 +8,17 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #define PAGE_SIZE 4096
-#define BUF_SIZE 512
-#define MAP_SIZE PAGE_SIZE * 100
+#define BUF_SIZE (PAGE_SIZE/8)
+#define MAP_SIZE (PAGE_SIZE * 100)
 int main (int argc, char* argv[])
 {
 	char buf[BUF_SIZE];
 	int i, dev_fd, file_fd;// the fd for the device and the fd for the input file
-	size_t ret, file_size = 0, data_size = -1, offset = 0;
+	size_t ret, file_size = 0, data_size = -1;
+	off_t offset = 0;
 	char file_name[50];
 	char method[20];
 	char ip[20];
@@ -61,8 +63,11 @@ int main (int argc, char* argv[])
 			}while(ret > 0);
 			break;
 		case 'm':
+			kernel_address = mmap(NULL, MAP_SIZE, PROT_READ, MAP_SHARED, dev_fd, 0);
 			while (1) {
 				ret = ioctl(dev_fd, 0x12345678);
+				//printf("ret : %d",ret);
+				//fprintf(stderr,"ret: %d",ret);
 				if (ret == -1) {
 					perror("ioctl\n");
 					return 1;
@@ -73,20 +78,34 @@ int main (int argc, char* argv[])
 					break;
 				}
 				posix_fallocate(file_fd, offset, ret);
+				//fprintf(stderr,"after falloc,ret=%ld,offset=%ld\n",(long)ret,(long)offset);
 				file_address = mmap(NULL, ret, PROT_WRITE, MAP_SHARED, file_fd, offset);
-				kernel_address = mmap(NULL, ret, PROT_READ, MAP_SHARED, dev_fd, offset);
+				if(file_address == (void*)-1)
+					perror("file mmap failed");
+				kernel_address = mmap(NULL, ret, PROT_READ, MAP_SHARED, dev_fd, 0);
 				//fprintf(stderr, "file addr: %p\n", file_address);
 				//fprintf(stderr, "kernel addr: %p\n", kernel_address);
+				
+				//fprintf(stderr,"after mmap");
 				memcpy(file_address, kernel_address, ret);
+				//fprintf(stderr,"after memcpy");
 				munmap(file_address, ret);
+				//fprintf(stderr,"after mumap");
 				munmap(kernel_address, ret);
 				offset += ret;
+				/*
+				printf("continue?");
+				int dd;
+				scanf("%d",&dd);
+				if(dd!=1)break;*/
 			}
+			ioctl(dev_fd, 23, (unsigned long)kernel_address);
+			munmap(kernel_address, MAP_SIZE);
 			break;
 	}
 
 
-	ioctl(dev_fd, 7122); //tcp
+	//ioctl(dev_fd, 7122); //tcp
 
 	if(ioctl(dev_fd, 0x12345679) == -1)// end receiving data, close the connection
 	{

@@ -30,10 +30,9 @@
 #define slave_IOCTL_MMAP 0x12345678
 #define slave_IOCTL_EXIT 0x12345679
 
-
 #define PAGE_SIZE 4096
-#define BUF_SIZE 512
-#define MAP_SIZE PAGE_SIZE * 2000
+#define BUF_SIZE (PAGE_SIZE/8)
+#define MAP_SIZE (PAGE_SIZE * 100)
 
 
 
@@ -55,7 +54,7 @@ static void __exit slave_exit(void);
 int slave_close(struct inode *inode, struct file *filp);
 int slave_open(struct inode *inode, struct file *filp);
 static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl_param);
-ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp );
+int receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp );
 
 static mm_segment_t old_fs;
 static ksocket_t sockfd_cli;//socket to the master server
@@ -138,12 +137,19 @@ static void __exit slave_exit(void)
 int slave_close(struct inode *inode, struct file *filp)
 {
 	kfree(filp->private_data);
+	//free_pages(filp->private_data,8);
 	return 0;
 }
 
 int slave_open(struct inode *inode, struct file *filp)
 {
+	//printk("MAPSIZE slave: %d\n", MAP_SIZE);
+	//filp->private_data = __get_free_pages(GFP_KERNEL,8);
 	filp->private_data = kmalloc(MAP_SIZE, GFP_KERNEL);
+	if(filp->private_data==NULL)
+	{
+		printk("NULL pointer error(slave)");
+}
 	return 0;
 }
 static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl_param)
@@ -152,25 +158,25 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 
 	int addr_len ;
 	//unsigned int i;
-	size_t len, data_size = 0, offset = 0;
+	//size_t len, data_size = 0;
+	size_t offset = 0, rec_n;
 	char *tmp, ip[20], buf[BUF_SIZE];
 	//struct page *p_print;
 	//unsigned char *px;
+	
+	int iiiii;
 
-    pgd_t *pgd;
-	//p4d_t *p4d;
+	pgd_t *pgd;
 	pud_t *pud;
 	pmd_t *pmd;
-    pte_t *ptep, pte;
+	pte_t *ptep, pte;
 	struct page* page;
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
 
-    printk("slave device ioctl\n");
 
 	switch(ioctl_num){
 		case slave_IOCTL_CREATESOCK:// create socket and connect to master
-            printk("slave device ioctl create socket\n");
 
 			if(copy_from_user(ip, (char*)ioctl_param, sizeof(ip)))
 				return -ENOMEM;
@@ -198,17 +204,27 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			tmp = inet_ntoa(&addr_srv.sin_addr);
 			printk("connected to : %s %d\n", tmp, ntohs(addr_srv.sin_port));
 			kfree(tmp);
-			printk("kfree(tmp)");
 			ret = 0;
 			break;
 		case slave_IOCTL_MMAP:
-			while (1) {
-				len = krecv(sockfd_cli, buf, sizeof(buf), 0);
-				if (len == 0) {
+			//printk("fuck %d",MAP_SIZE/BUF_SIZE);
+			while(offset<MAP_SIZE) {
+				memset(buf,0,BUF_SIZE);
+				size_t readlen = offset+BUF_SIZE>MAP_SIZE? MAP_SIZE-offset:BUF_SIZE;
+				rec_n = krecv(sockfd_cli, buf, readlen, 0);
+//printk("log1\nbuf:%s\nrec_n:%d",buf,rec_n);
+				
+				if (rec_n <= 0) {
+					//printk("error rec_n:%d\n",rec_n);
 					break;
 				}
-				memcpy(file->private_data + offset, buf, len);
-				offset += len;
+				
+				//if(buf[0]==0)continue;
+//printk("log2\nfile->private_data: %p\nrec_n:%d",file->private_data,rec_n);
+				//memcpy(file->private_data + offset, buf, rec_n);
+				memcpy(file->private_data+offset , buf, rec_n);
+				//if(iiiii%50==1)printk("log3\nrec_n:%d\n",rec_n);
+				offset += rec_n;
 			}
 			ret = offset;
 			break;
@@ -219,10 +235,10 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 				printk("kclose cli error\n");
 				return -1;
 			}
+			//set_fs(old_fs);
 			ret = 0;
 			break;
 		default:
-            pgd = pgd_offset(current->mm, ioctl_param);
 			pgd = pgd_offset(current->mm, ioctl_param);
 			pud = pud_offset(pgd, ioctl_param);
 			pmd = pmd_offset(pud, ioctl_param);
@@ -237,12 +253,13 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			ret = 0;
 			break;
 	}
+	//printk("before_fs");
 	set_fs(old_fs);
-
+	//printk("ret:%d",ret);
 	return ret;
 }
 
-ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp )
+int receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp )
 {
 //call when user is reading from this device
 	char msg[BUF_SIZE];
