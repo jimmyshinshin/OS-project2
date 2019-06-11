@@ -225,7 +225,7 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
 		default:
 			pgd = pgd_offset(current->mm, ioctl_param);
 			//pud = pud_offset(pgd, ioctl_param);
-			pmd = pmd_offset(pud, ioctl_param);
+			pmd = pmd_offset(pgd, ioctl_param);
 			ptep = pte_offset_kernel(pmd , ioctl_param);
 			pte = *ptep;
 			printk("master: %lX\n", pte);
