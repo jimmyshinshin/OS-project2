@@ -77,6 +77,8 @@ int main (int argc, char* argv[])
 				//fprintf(stderr, "file addr: %p\n", file_address);
 				//fprintf(stderr, "kernel addr: %p\n", kernel_address);
 				memcpy(kernel_address, file_address, length);
+				munmap(file_address, length);
+				munmap(kernel_address, length);
 				offset += length;
 				ioctl(dev_fd, 0x12345678, length);
 			}

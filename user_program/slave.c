@@ -78,6 +78,8 @@ int main (int argc, char* argv[])
 				//fprintf(stderr, "file addr: %p\n", file_address);
 				//fprintf(stderr, "kernel addr: %p\n", kernel_address);
 				memcpy(file_address, kernel_address, ret);
+				munmap(file_address, ret);
+				munmap(kernel_address, ret);
 				offset += ret;
 			}
 			break;
